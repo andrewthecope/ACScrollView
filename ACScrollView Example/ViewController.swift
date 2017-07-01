@@ -8,15 +8,15 @@
 
 import UIKit
 
-class ViewController: UIViewController, ACScrollViewDataSource {
+class ViewController: UIViewController, ACScrollViewDataSource, ACScrollViewDelegate {
 
     @IBOutlet weak var scrollView: ACScrollView!
 
-    // our data in this example:
+    // the data in this example:
     var colors = [UIColor.blue, UIColor.green, UIColor.yellow, UIColor.red]
     
     override func viewDidLoad() {
-        // Make sure you override scrollViewDataSource, not delegate.
+        scrollView.scrollViewDelegate = self
         scrollView.scrollViewDataSource = self
     }
     
@@ -24,7 +24,7 @@ class ViewController: UIViewController, ACScrollViewDataSource {
         scrollView.scrollToCenter() // To-Do: find way to avoid this!
     }
     
-    // MARK: ACScrollViewDataSource Methods
+// MARK: ACScrollViewDataSource Methods
     
     func numPagesIn(scrollView:ACScrollView) -> Int {
         return colors.count
@@ -36,6 +36,16 @@ class ViewController: UIViewController, ACScrollViewDataSource {
         let view = UIView()
         view.backgroundColor = colors[page]
         return view
+    }
+    
+// MARK: ACScrollViewDelegate Methods
+    
+    func scrollViewDidScrollTo(location: CGPoint, within scrollView: ACScrollView) {
+        print("Did scroll to x coordinate: \(location.x)")
+    }
+    
+    func scrollViewDidScrollTo(page: Int, within scrollView: ACScrollView) {
+        print("Did scroll to page: \(page)")
     }
     
     

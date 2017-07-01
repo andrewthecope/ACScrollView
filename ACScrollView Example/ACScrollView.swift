@@ -18,8 +18,13 @@ protocol ACScrollViewDataSource {
     func viewFor(page:Int, within scrollView:ACScrollView) -> UIView
 }
 
-class ACScrollView: UIScrollView, UIScrollViewDelegate {
+protocol ACScrollViewDelegate {
+    func scrollViewDidScrollTo(location:CGPoint, within scrollView:ACScrollView)
+    func scrollViewDidScrollTo(page:Int, within scrollView:ACScrollView)
+}
 
+class ACScrollView: UIScrollView, UIScrollViewDelegate {
+    
     enum ScrollDirection {
         case forward
         case backward
@@ -31,6 +36,7 @@ class ACScrollView: UIScrollView, UIScrollViewDelegate {
     internal var rightView = UIView()
     internal var currentPage = 0
     
+    var scrollViewDelegate: ACScrollViewDelegate? = nil
     var scrollViewDataSource: ACScrollViewDataSource? = nil {
         didSet {
             // initialize views when setting new data source
@@ -42,6 +48,16 @@ class ACScrollView: UIScrollView, UIScrollViewDelegate {
             }
         }
     }
+    
+    // MARK: Public Methods
+    
+    public func moveTo(page:Int) {
+        currentPage = page
+        loadDataForPage(number: currentPage)
+        scrollToCenter()
+    }
+    
+    // MARK: Internal Methods
     
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -79,18 +95,42 @@ class ACScrollView: UIScrollView, UIScrollViewDelegate {
     
     internal func loadDataForPage(number pageNum:Int) {
         
-        if let scrollViewDataSource = scrollViewDataSource {
-
-            let leftViewContents = scrollViewDataSource.viewFor(page: getPageNum(before:pageNum), within:self)
-            let rightViewContents = scrollViewDataSource.viewFor(page: getPageNum(after:pageNum), within:self)
-            let centerViewContents = scrollViewDataSource.viewFor(page: pageNum, within:self)
+        scrollViewDelegate?.scrollViewDidScrollTo(page: pageNum, within: self)
+        
+        if let dataSource = scrollViewDataSource {
+            let leftViewContent = dataSource.viewFor(page: getPageNum(before:pageNum), within:self)
+            let rightViewContent = dataSource.viewFor(page: getPageNum(after:pageNum), within:self)
+            let centerViewContent = dataSource.viewFor(page: pageNum, within:self)
             
-            updateContentsOf(page: leftView, with: leftViewContents)
-            updateContentsOf(page: rightView, with: rightViewContents)
-            updateContentsOf(page: centerView, with: centerViewContents)
+            updateContentsOf(page: leftView, with: leftViewContent)
+            updateContentsOf(page: rightView, with: rightViewContent)
+            updateContentsOf(page: centerView, with: centerViewContent)
         }
     }
-
+    
+    //Mark: Information Provided For Delegate Methods
+    
+    func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        //calculate offset as if this was a regular UIScrollView and send to delegate
+        if let dataSource = scrollViewDataSource {
+            let numPages = dataSource.numPagesIn(scrollView: self)
+            let fullWidth = frame.width * CGFloat(numPages)
+            
+            let offset = (self.contentOffset.x - frame.width) + (frame.width * CGFloat(currentPage))
+            var finalX = offset
+            
+            if offset < 0 {
+                finalX = fullWidth - offset
+            } else if offset > fullWidth {
+                finalX = offset - fullWidth
+            }
+            
+            scrollViewDelegate?.scrollViewDidScrollTo(location: CGPoint(x: finalX, y: 0), within: self)
+        }
+        
+        
+    }
+    
     //Mark: For Your Convenience
     
     internal func scrollToCenter() {
